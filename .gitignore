@@ -1,2 +1,3 @@
 *.pkl
 *.wav
+__pycache__/

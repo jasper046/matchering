@@ -1,3 +1,14 @@
 *.pkl
 *.wav
 __pycache__/
+matchering.egg-info/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+.pytest_cache/

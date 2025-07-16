@@ -9,6 +9,7 @@ matchering/core.py
 matchering/defaults.py
 matchering/dsp.py
 matchering/loader.py
+matchering/presets.py
 matchering/preview_creator.py
 matchering/results.py
 matchering/saver.py

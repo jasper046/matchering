@@ -35,19 +35,8 @@ from .stage_helpers import (
 from .limiter import limit
 
 
-def __match_levels(
-    target: np.ndarray, reference: np.ndarray, config: Config
-) -> (
-    np.ndarray,
-    np.ndarray,
-    float,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    float,
-    float,
-):
+def analyze_reference(reference: np.ndarray, config: Config) -> dict:
+    """Analyzes a reference track and returns a dictionary of its characteristics."""
     debug_line()
     info(Code.INFO_MATCHING_LEVELS)
 
@@ -59,6 +48,33 @@ def __match_levels(
     reference, final_amplitude_coefficient = normalize_reference(reference, config)
 
     (
+        _,
+        _,
+        reference_mid_loudest_pieces,
+        reference_side_loudest_pieces,
+        reference_match_rms,
+        *_,
+    ) = analyze_levels(reference, "reference", config)
+
+    return {
+        "final_amplitude_coefficient": final_amplitude_coefficient,
+        "reference_mid_loudest_pieces": reference_mid_loudest_pieces,
+        "reference_side_loudest_pieces": reference_side_loudest_pieces,
+        "reference_match_rms": reference_match_rms,
+    }
+
+
+def __match_levels(
+    target: np.ndarray, preset: dict, config: Config
+) -> (
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    float,
+    float,
+):
+    (
         target_mid,
         target_side,
         target_mid_loudest_pieces,
@@ -68,20 +84,11 @@ def __match_levels(
         target_piece_size,
     ) = analyze_levels(target, "target", config)
 
-    (
-        reference_mid,
-        reference_side,
-        reference_mid_loudest_pieces,
-        reference_side_loudest_pieces,
-        reference_match_rms,
-        *_,
-    ) = analyze_levels(reference, "reference", config)
-
     rms_coefficient, target_mid, target_side = get_rms_c_and_amplify_pair(
         target_mid,
         target_side,
         target_match_rms,
-        reference_match_rms,
+        preset["reference_match_rms"],
         config.min_value,
         "target",
     )
@@ -93,14 +100,10 @@ def __match_levels(
     return (
         target_mid,
         target_side,
-        final_amplitude_coefficient,
         target_mid_loudest_pieces,
         target_side_loudest_pieces,
-        reference_mid_loudest_pieces,
-        reference_side_loudest_pieces,
         target_divisions,
         target_piece_size,
-        reference_match_rms,
     )
 
 
@@ -215,28 +218,45 @@ def main(
     need_no_limiter: bool = False,
     need_no_limiter_normalized: bool = False,
 ) -> (np.ndarray, np.ndarray, np.ndarray):
+    preset = analyze_reference(reference, config)
+    del reference
+
+    return main_with_preset(
+        target,
+        preset,
+        config,
+        need_default,
+        need_no_limiter,
+        need_no_limiter_normalized,
+    )
+
+
+def main_with_preset(
+    target: np.ndarray,
+    preset: dict,
+    config: Config,
+    need_default: bool = True,
+    need_no_limiter: bool = False,
+    need_no_limiter_normalized: bool = False,
+) -> (np.ndarray, np.ndarray, np.ndarray):
     (
         target_mid,
         target_side,
-        final_amplitude_coefficient,
         target_mid_loudest_pieces,
         target_side_loudest_pieces,
-        reference_mid_loudest_pieces,
-        reference_side_loudest_pieces,
         target_divisions,
         target_piece_size,
-        reference_match_rms,
-    ) = __match_levels(target, reference, config)
+    ) = __match_levels(target, preset, config)
 
-    del target, reference
+    del target
 
     result_no_limiter, result_no_limiter_mid = __match_frequencies(
         target_mid,
         target_side,
         target_mid_loudest_pieces,
-        reference_mid_loudest_pieces,
+        preset["reference_mid_loudest_pieces"],
         target_side_loudest_pieces,
-        reference_side_loudest_pieces,
+        preset["reference_side_loudest_pieces"],
         config,
     )
 
@@ -244,9 +264,7 @@ def main(
         target_mid,
         target_side,
         target_mid_loudest_pieces,
-        reference_mid_loudest_pieces,
         target_side_loudest_pieces,
-        reference_side_loudest_pieces,
     )
 
     result_no_limiter = __correct_levels(
@@ -254,7 +272,7 @@ def main(
         result_no_limiter_mid,
         target_divisions,
         target_piece_size,
-        reference_match_rms,
+        preset["reference_match_rms"],
         config,
     )
 
@@ -262,7 +280,7 @@ def main(
 
     result, result_no_limiter, result_no_limiter_normalized = __finalize(
         result_no_limiter,
-        final_amplitude_coefficient,
+        preset["final_amplitude_coefficient"],
         need_default,
         need_no_limiter,
         need_no_limiter_normalized,

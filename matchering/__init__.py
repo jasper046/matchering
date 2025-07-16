@@ -31,6 +31,21 @@ __version__ = "2.0.6"
 from .log.handlers import set_handlers as log
 from .results import Result, pcm16, pcm24
 from .defaults import Config
-from .core import process
+from .core import process, process_with_preset, analyze_reference_track
+from .presets import blend_presets
 from .loader import load
 from .checker import check
+
+__all__ = [
+    "log",
+    "Result",
+    "pcm16",
+    "pcm24",
+    "Config",
+    "process",
+    "process_with_preset",
+    "analyze_reference_track",
+    "blend_presets",
+    "load",
+    "check",
+]
